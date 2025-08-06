@@ -6,59 +6,59 @@
 </head>
 <body>
   <h1>문제 선택</h1>
-
-  <button onclick="loadProblem('story_001')">story_001</button>
-  <button onclick="loadProblem('image_002')">image_002</button>
-  <button onclick="loadProblem('explanation_003')">explanation_003</button>
-  <button onclick="loadProblem('analysis_004')">analysis_004</button>
-  <button onclick="loadProblem('search_005')">search_005</button>
-
-  <pre id="result" style="margin-top: 20px; background: #f5f5f5; padding: 10px;"></pre>
-
-  <script>
-    function loadProblem(id) {
-      fetch(`http://localhost:8000/api/problems/${id}`)
-        .then(response => {
-          if (!response.ok) throw new Error('문제 불러오기 실패');
-          return response.json();
-        })
-        .then(data => {
-          document.getElementById('result').textContent = JSON.stringify(data, null, 2);
-        })
-        .catch(error => {
-          document.getElementById('result').textContent = error.message;
-        });
-    }
-  </script>
+  <div id="problemList"></div>
 
   <h2>프롬프트 제출</h2>
-<form id="promptForm">
-  <label for="problemId">문제 ID:</label><br>
-  <input type="text" id="problemId" name="problemId" placeholder="예: story_001"><br>
-  <label for="userPrompt">사용자 프롬프트:</label><br>
-  <textarea id="userPrompt" name="userPrompt" rows="4" cols="50"></textarea><br><br>
-  <button type="submit">제출</button>
-</form>
+  <form id="promptForm">
+    <label for="problemId">선택된 문제 ID:</label><br>
+    <input type="text" id="problemId" name="problemId" readonly><br><br>
 
-<script>
-  document.getElementById("promptForm").addEventListener("submit", function(event) {
-    event.preventDefault();
+    <label for="userPrompt">사용자 프롬프트:</label><br>
+    <textarea id="userPrompt" name="userPrompt" rows="4" cols="50"></textarea><br><br>
+    <button type="submit">제출</button>
+  </form>
 
-    const problemId = document.getElementById("problemId").value;
-    const userPrompt = document.getElementById("userPrompt").value;
+  <script>
+    // 1. 문제 리스트 받아오기
+    fetch("http://localhost:8000/api/problems")
+      .then(response => response.json())
+      .then(data => {
+        const problemListDiv = document.getElementById("problemList");
+        Object.entries(data).forEach(([problemId, problem]) => {
+          const button = document.createElement("button");
+          button.innerText = `${problemId}: ${problem.title}`;
+          button.onclick = () => {
+            document.getElementById("problemId").value = problemId;
+          };
+          problemListDiv.appendChild(button);
+          problemListDiv.appendChild(document.createElement("br"));
+        });
+      });
 
-    fetch("http://localhost:8000/api/submit_prompt", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ problem_id: problemId, user_prompt: userPrompt })
-    })
-    .then(response => response.json())
-    .then(data => alert(data.message))
-    .catch(error => console.error("Error:", error));
-  });
-</script>
+    // 2. 폼 제출 핸들러
+    document.getElementById("promptForm").addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      const problemId = document.getElementById("problemId").value;
+      const userPrompt = document.getElementById("userPrompt").value;
+
+      if (!problemId) {
+        alert("먼저 문제를 선택하세요.");
+        return;
+      }
+
+      fetch("http://localhost:8000/api/submit_prompt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ problem_id: problemId, user_prompt: userPrompt })
+      })
+      .then(response => response.json())
+      .then(data => alert(data.message))
+      .catch(error => console.error("Error:", error));
+    });
+  </script>
 
 </body>
 </html>
