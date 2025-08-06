@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 app.include_router(evaluate_router)
-app.include_router(problem_router)
 
 # ✅ CORS 설정 추가
 app.add_middleware(
