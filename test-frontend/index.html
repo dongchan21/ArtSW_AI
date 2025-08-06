@@ -30,5 +30,35 @@
         });
     }
   </script>
+
+  <h2>프롬프트 제출</h2>
+<form id="promptForm">
+  <label for="problemId">문제 ID:</label><br>
+  <input type="text" id="problemId" name="problemId" placeholder="예: story_001"><br>
+  <label for="userPrompt">사용자 프롬프트:</label><br>
+  <textarea id="userPrompt" name="userPrompt" rows="4" cols="50"></textarea><br><br>
+  <button type="submit">제출</button>
+</form>
+
+<script>
+  document.getElementById("promptForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const problemId = document.getElementById("problemId").value;
+    const userPrompt = document.getElementById("userPrompt").value;
+
+    fetch("http://localhost:8000/api/submit_prompt", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ problem_id: problemId, user_prompt: userPrompt })
+    })
+    .then(response => response.json())
+    .then(data => alert(data.message))
+    .catch(error => console.error("Error:", error));
+  });
+</script>
+
 </body>
 </html>
