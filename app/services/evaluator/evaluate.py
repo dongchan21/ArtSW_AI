@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-@router.post("/mode")
+@router.post("/evaluate_prompt")
 def evaluate_prompt(user_prompt: str, problem_id: str) -> dict:
     # Placeholder logic for demonstration
     return {

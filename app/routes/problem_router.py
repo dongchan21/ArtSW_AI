@@ -25,3 +25,34 @@ def submit_prompt(data: PromptSubmission):
 def list_problems():
     print("🔍 [GET] /problems 요청 도착")
     return problems
+
+class PromptEvaluationRequest(BaseModel):
+    problem_id: str
+    user_prompt: str
+
+@router.post("/api/evaluate_prompt")
+def evaluate_prompt(data: PromptEvaluationRequest):
+    if data.problem_id not in problems:
+        raise HTTPException(status_code=404, detail="문제를 찾을 수 없습니다.")
+    
+    ref_prompt = problems[data.problem_id]["reference_prompt"]
+    skills = problems[data.problem_id]["skills_required"]
+
+    user_prompt = data.user_prompt.strip().lower()
+
+    # 간단한 평가 기준 예시
+    score = 0
+    feedback = []
+
+    for skill in skills:
+        if skill in user_prompt:
+            score += 1
+            feedback.append(f"✅ '{skill}' 요소가 잘 반영되어 있습니다.")
+        else:
+            feedback.append(f"⚠️ '{skill}' 요소가 부족하거나 누락되었습니다.")
+
+    return {
+        "score": score,
+        "total": len(skills),
+        "feedback": feedback
+    }

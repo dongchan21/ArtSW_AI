@@ -1,13 +1,26 @@
-
 from fastapi import FastAPI
 from app.routes.evaluate import router as evaluate_router
 from app.routes.problem_router import router as problem_router
+from app.routes.evaluate_router import router as evaluate_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
+import os
+from dotenv import load_dotenv, find_dotenv
+from openai import OpenAI
+from getpass import getpass
+
+from app.core.settings import get_openai_api_key
+from app.routes.debug_router import router as debug_router
+
 
 app = FastAPI()
-app.include_router(evaluate_router)
+
+try:
+    ok = bool(get_openai_api_key())
+    print("OPENAI_API_KEY loaded?", ok)
+except Exception as e:
+    print("ENV LOAD ERROR:", e)
 
 # ✅ CORS 설정 추가
 app.add_middleware(
@@ -18,3 +31,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(problem_router, prefix="/api")
+app.include_router(evaluate_router, prefix="/api")
+app.include_router(debug_router, prefix="/api")

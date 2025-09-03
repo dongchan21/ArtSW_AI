@@ -16,9 +16,15 @@
     <label for="userPrompt">사용자 프롬프트:</label><br>
     <textarea id="userPrompt" name="userPrompt" rows="4" cols="50"></textarea><br><br>
     <button type="submit">제출</button>
+
+    <button id="runEvalBtn" type="button">실행 + 평가</button>
   </form>
 
+  <h2>평가 결과</h2>
+  <pre id="problem-detail" style="background:#f5f5f5; padding:10px;"></pre>
+
   <script>
+    document.addEventListener("DOMContentLoaded", () => {
     // 1. 문제 리스트 받아오기
     fetch("http://localhost:8000/api/problems")
       .then(response => response.json())
@@ -58,6 +64,51 @@
       .then(data => alert(data.message))
       .catch(error => console.error("Error:", error));
     });
+
+//   document.getElementById("evaluateBtn").addEventListener("click", function () {
+//   const problemId = document.getElementById("problemId").value;
+//   const userPrompt = document.getElementById("userPrompt").value;
+
+//   if (!problemId || !userPrompt) {
+//     alert("문제 선택과 프롬프트 입력이 모두 필요합니다.");
+//     return;
+//   }
+
+//   fetch("http://localhost:8000/api/evaluate_prompt", {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json"
+//     },
+//     body: JSON.stringify({ problem_id: problemId, user_prompt: userPrompt })
+//   })
+//   .then(res => res.json())
+//   .then(data => {
+//     alert(
+//   `평가 점수: ${data.score} / ${data.total}\n\n피드백:\n` + data.feedback
+// );
+//   })
+//   .catch(err => console.error("평가 실패:", err));
+// });
+
+document.getElementById("runEvalBtn").addEventListener("click", async () => {
+    const problemId = document.getElementById("problemId").value;
+    const userPrompt = document.getElementById("userPrompt").value;
+    if (!problemId || !userPrompt) {
+      alert("문제 선택과 프롬프트 입력이 필요합니다.");
+      return;
+    }
+    const res = await fetch("http://localhost:8000/api/run_and_evaluate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ problem_id: problemId, user_prompt: userPrompt, mode: "evaluation" })
+    });
+    const data = await res.json();
+    // 결과 출력 (간단 버전)
+    const pretty = JSON.stringify(data, null, 2);
+    document.getElementById("problem-detail").textContent = pretty;
+    alert(`LLM 총점: ${data.llm_eval?.overall_score ?? "N/A"} / 100`);
+  });
+});
   </script>
 
 </body>
