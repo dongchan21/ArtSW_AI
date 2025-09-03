@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from app.routes.evaluate import router as evaluate_router
 from app.routes.problem_router import router as problem_router
 from app.routes.evaluate_router import router as evaluate_router
+from app.routes import stream_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -33,3 +34,4 @@ app.add_middleware(
 app.include_router(problem_router, prefix="/api")
 app.include_router(evaluate_router, prefix="/api")
 app.include_router(debug_router, prefix="/api")
+app.include_router(stream_router.router, prefix="/api")

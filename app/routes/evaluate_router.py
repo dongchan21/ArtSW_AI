@@ -21,6 +21,8 @@ class RunEvalRequest(BaseModel):
 class RunEvalResponse(BaseModel):
     problem_id: str
     used_model: str
+
+
     user_prompt: str
     reference_prompt: str
     user_output: str
@@ -106,7 +108,9 @@ LLM_EVAL_USER_TMPL = """다음은 문제와 두 개의 프롬프트 결과입니
 {ref_output}
 
 아래 JSON 스키마로만 평가 결과를 주세요. 근데 점수를 좀 짜게 줬으면 좋겠어요.
- 쓸만하고, 잘 작성된 프롬프트 정도면 60점 정도.(설명 없이 JSON만):
+ 쓸만하고, 잘 작성된 프롬프트 정도면 60점 정도.
+ 대충 ... 해줘. 이렇게 작성하면 30점 정도.
+ (설명 없이 JSON만):
 {{
   "quality": {{
     "clarity": 0-10,
