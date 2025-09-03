@@ -19,12 +19,15 @@
 
     <button id="runEvalBtn" type="button">실행 + 평가</button>
 
-    <!-- 폼 안, runEvalBtn 옆에 하나 추가 -->
-    <button id="streamBtn" type="button">스트리밍 실행</button>
+    <h2>사용자 프롬프트 출력</h2>
+    <pre id="stream-user-output" style="background:#222;color:#0f0;padding:10px;white-space:pre-wrap;min-height:120px;"></pre>
 
-    <!-- 아래 평가 결과 영역과 별도로, 스트리밍 출력 전용 -->
-    <h2>스트리밍 출력</h2>
-    <pre id="stream-output" style="background:#111;color:#0f0;padding:10px;white-space:pre-wrap;min-height:120px;"></pre>
+    <h2>레퍼런스 프롬프트 출력</h2>
+    <pre id="stream-ref-output" style="background:#222;color:#0ff;padding:10px;white-space:pre-wrap;min-height:120px;"></pre>
+
+    <button id="sequentialStreamBtn" type="button">순차 스트리밍 (사용자 → 레퍼런스)</button>
+
+
 
   </form>
 
@@ -119,116 +122,64 @@ document.getElementById("runEvalBtn").addEventListener("click", async () => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-  // ... (당신의 기존 코드들: 문제 목록 fetch, submit, runEvalBtn 등)
+  async function runStream(endpoint, body, outElId) {
+    const outEl = document.getElementById(outElId);
+    outEl.textContent = "";
 
-  // --- 스트리밍: 상태 및 유틸 ---
-  let currentStreamAbort = null;
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body),
+    });
+    if (!res.ok || !res.body) {
+      outEl.textContent = `HTTP ${res.status} 에러`;
+      return;
+    }
 
-  function appendStreamText(text) {
-    const el = document.getElementById("stream-output");
-    el.textContent += text;
-    // 자동 스크롤
-    el.scrollTop = el.scrollHeight;
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() || "";
+
+      for (const part of parts) {
+        if (!part.startsWith("data:")) continue;
+        const data = part.slice(5).trim();
+        if (data === "[DONE]") return; // 한 스트림 종료
+        try {
+          const json = JSON.parse(data);         // { delta: "..." }
+          if (json.delta) outEl.textContent += json.delta;
+        } catch { /* raw 무시 */ }
+      }
+    }
   }
 
-  function resetStreamOutput() {
-    const el = document.getElementById("stream-output");
-    el.textContent = "";
-  }
-
-  // --- 스트리밍 버튼 핸들러 ---
-  document.getElementById("streamBtn").addEventListener("click", async () => {
+  // 순차 실행: 사용자 → 끝나면 레퍼런스(문제의 reference_prompt 사용)
+  document.getElementById("sequentialStreamBtn").addEventListener("click", async () => {
     const problemId = document.getElementById("problemId").value;
     const userPrompt = document.getElementById("userPrompt").value;
-
     if (!problemId || !userPrompt) {
       alert("문제 선택과 프롬프트 입력이 필요합니다.");
       return;
     }
 
-    // 이전 스트림이 돌고 있으면 중단
-    if (currentStreamAbort) {
-      currentStreamAbort.abort();
-      currentStreamAbort = null;
-    }
+    // 1) 사용자 프롬프트 스트리밍
+    await runStream("http://localhost:8000/api/chat/stream_user", {
+      problem_id: problemId,
+      user_prompt: userPrompt
+    }, "stream-user-output");
 
-    resetStreamOutput();
-    appendStreamText("▶ 스트리밍 시작...\n");
-
-    // AbortController로 중단 가능하게
-    const ac = new AbortController();
-    currentStreamAbort = ac;
-
-    try {
-      // 필요하다면 메시지에 problemId를 함께 보낼 수 있음
-      const res = await fetch("http://localhost:8000/api/chat/stream", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: "You are a helpful assistant." },
-            // 문제 컨텍스트를 넣고 싶으면 title/desc를 서버에서 받아와 넣어도 좋음
-            { role: "user", content: userPrompt }
-          ]
-        }),
-        signal: ac.signal
-      });
-
-      if (!res.ok || !res.body) {
-        appendStreamText(`\n[에러] HTTP ${res.status}`);
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      // 본격 스트리밍 루프
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // SSE는 공백줄(\n\n) 단위로 분리됨
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() || ""; // 마지막 덜 온 청크는 버퍼에 남김
-
-        for (const part of parts) {
-          // "data: ..." 라인만 처리
-          const line = part.split("\n").find(l => l.startsWith("data:"));
-          if (!line) continue;
-          const data = line.slice(5).trim(); // 'data:' 제거
-
-          if (data === "[DONE]") {
-            appendStreamText("\n\n■ 스트리밍 종료");
-            currentStreamAbort = null;
-            return;
-          }
-
-          try {
-            const json = JSON.parse(data); // { delta: "..." }
-            if (json.delta) appendStreamText(json.delta);
-          } catch (e) {
-            // 파싱 실패 시, 원문 그대로 찍어보기
-            appendStreamText(`\n[WARN raw] ${data}`);
-          }
-        }
-      }
-
-      appendStreamText("\n\n■ 스트림 완료");
-    } catch (err) {
-      if (err.name === "AbortError") {
-        appendStreamText("\n\n■ 스트림 중단됨");
-      } else {
-        appendStreamText(`\n\n[에러] ${err}`);
-      }
-    } finally {
-      currentStreamAbort = null;
-    }
+    // 2) 레퍼런스 프롬프트 스트리밍 (problems.json의 reference_prompt 자동 사용)
+    await runStream("http://localhost:8000/api/chat/stream_reference_by_problem", {
+      problem_id: problemId
+    }, "stream-ref-output");
   });
-
 }); 
 
   </script>

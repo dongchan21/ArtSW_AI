@@ -1,0 +1,13 @@
+* [33m6ba263f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/cleanup/remove-env[m[33m)[m chore: ignore env files
+* [33m4352cef[m chore: stop tracking app/.env and ignore it
+* [33md427884[m test
+* [33m23a0423[m Remove accidentally committed .env and add .gitignore
+* [33m1a1e2e8[m 사용자에게 프롬프트 입력받기
+* [33mbd72a60[m 사용자에게 프롬프트 입력받기
+* [33mdd4437e[m Initial commit
+* [33ma067fda[m Initial commit
+* [33m50c5cdc[m[33m ([m[1;31morigin/main[m[33m)[m Remove accidentally committed .env and add .gitignore
+* [33m034c173[m 사용자에게 프롬프트 입력받기
+* [33me95ee00[m 사용자에게 프롬프트 입력받기
+* [33m1a8ba87[m Initial commit
+* [33m52dcf16[m Initial commit
