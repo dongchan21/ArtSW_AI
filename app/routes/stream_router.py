@@ -1,20 +1,17 @@
 # app/routes/stream_router.py
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 from openai import OpenAI
 import os, json
 
 router = APIRouter()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 DATA_PATH = os.path.join("data", "problems.json")
 
 def load_problems():
-    try:
-        with open(DATA_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"problems.json 로드 실패: {e}")
+    with open(DATA_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def make_stream(messages, model="gpt-4o-mini"):
     def sse_events():
@@ -61,3 +58,26 @@ def chat_stream_reference_by_problem(payload = Body(...)):
         {"role": "user", "content": ref_prompt},
     ]
     return make_stream(messages, model=payload.get("model", "gpt-4o-mini"))
+
+@router.post("/chat/generate_reference_full")
+def generate_reference_full(payload = Body(...)):
+    problem_id = payload.get("problem_id")
+    model = payload.get("model", "gpt-4o-mini")
+    if not problem_id:
+        raise HTTPException(status_code=422, detail="problem_id 필요")
+
+    prob = load_problems().get(problem_id)
+    if not prob or not prob.get("reference_prompt"):
+        raise HTTPException(status_code=404, detail="reference_prompt 없음")
+
+    ref_prompt = prob["reference_prompt"]
+    comp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": ref_prompt},
+        ],
+        stream=False,
+    )
+    text = comp.choices[0].message.content or ""
+    return JSONResponse({"reference_output": text})

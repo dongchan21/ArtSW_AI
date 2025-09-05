@@ -122,9 +122,12 @@ document.getElementById("runEvalBtn").addEventListener("click", async () => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-  async function runStream(endpoint, body, outElId) {
+
+  // 스트리밍 유틸: 필요하면 4번째 인자로 버퍼 변수명 전달
+  async function runStream(endpoint, body, outElId, captureBufferVar = null) {
     const outEl = document.getElementById(outElId);
     outEl.textContent = "";
+    if (captureBufferVar) window[captureBufferVar] = "";
 
     const res = await fetch(endpoint, {
       method: "POST",
@@ -151,16 +154,22 @@ document.addEventListener("DOMContentLoaded", () => {
       for (const part of parts) {
         if (!part.startsWith("data:")) continue;
         const data = part.slice(5).trim();
-        if (data === "[DONE]") return; // 한 스트림 종료
+        if (data === "[DONE]") return;
+
         try {
-          const json = JSON.parse(data);         // { delta: "..." }
-          if (json.delta) outEl.textContent += json.delta;
-        } catch { /* raw 무시 */ }
+          const json = JSON.parse(data); // { delta: "..." }
+          if (json.delta) {
+            outEl.textContent += json.delta;
+            if (captureBufferVar) window[captureBufferVar] += json.delta;
+          }
+        } catch {}
       }
     }
   }
 
+
   // 순차 실행: 사용자 → 끝나면 레퍼런스(문제의 reference_prompt 사용)
+    // 고급: 스트리밍 도중 평가 미리 걸기
   document.getElementById("sequentialStreamBtn").addEventListener("click", async () => {
     const problemId = document.getElementById("problemId").value;
     const userPrompt = document.getElementById("userPrompt").value;
@@ -169,18 +178,61 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // 1) 사용자 프롬프트 스트리밍
-    await runStream("http://localhost:8000/api/chat/stream_user", {
-      problem_id: problemId,
-      user_prompt: userPrompt
-    }, "stream-user-output");
+    // (A) 사용자 스트림 시작과 동시에 레퍼런스 전체 텍스트 비동기 요청 시작
+    const refFullPromise = fetch("http://localhost:8000/api/chat/generate_reference_full", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ problem_id: problemId })
+    }).then(r => r.json()).catch(e => ({ reference_output: "" }));
 
-    // 2) 레퍼런스 프롬프트 스트리밍 (problems.json의 reference_prompt 자동 사용)
-    await runStream("http://localhost:8000/api/chat/stream_reference_by_problem", {
-      problem_id: problemId
-    }, "stream-ref-output");
+    // 사용자 출력 스트리밍 + 전체 텍스트 캡처
+    await runStream(
+      "http://localhost:8000/api/chat/stream_user",
+      { problem_id: problemId, user_prompt: userPrompt },
+      "stream-user-output",
+      "USER_BUFFER"
+    );
+
+    // (B) 사용자 스트림이 끝난 시점에, ref 전체 텍스트 확보
+    const refJson = await refFullPromise;
+    const referenceFullText = refJson?.reference_output ?? "";
+
+    // (C) 평가만 수행하는 요청을 바로 걸어둠 (백그라운드 진행)
+    const evaluatePromise = fetch("http://localhost:8000/api/run_evaluate_only", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        problem_id: problemId,
+        user_prompt: userPrompt,
+        user_output: window.USER_BUFFER || "",
+        reference_output: referenceFullText,
+        mode: "evaluation"
+      })
+    }).then(r => r.json()).catch(err => ({ error: String(err) }));
+
+    // (D) 화면에는 레퍼런스도 '순차'로 스트리밍해서 보여줌 (평가와 병렬로 진행)
+    await runStream(
+      "http://localhost:8000/api/chat/stream_reference_by_problem",
+      { problem_id: problemId },
+      "stream-ref-output",
+      "REF_BUFFER_UI" // 화면용 캡처(선택)
+    );
+
+    // (E) 평가 결과 수신 → 점수/피드백만 요약해서 표시 (프롬프트/답변 본문 제외)
+    const evalData = await evaluatePromise;
+    const summary = {
+      score: evalData?.llm_eval?.overall_score ?? null,
+      quality: evalData?.llm_eval?.quality ?? null,
+      techniques_used: evalData?.llm_eval?.techniques_used ?? [],
+      missing_techniques: evalData?.llm_eval?.missing_techniques ?? [],
+      feedback: evalData?.llm_eval?.feedback ?? "",
+      heuristic: evalData?.heuristic ?? {}
+    };
+    document.getElementById("problem-detail").textContent =
+      JSON.stringify(summary, null, 2);
   });
-}); 
+
+}); // ← DOMContentLoaded 닫기
 
   </script>
 
