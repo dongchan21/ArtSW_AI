@@ -1,10 +1,6 @@
 from fastapi import FastAPI
-from app.routes.evaluate import router as evaluate_router
-from app.routes.problem_router import router as problem_router
-from app.routes.evaluate_router import router as evaluate_router
-from app.routes import stream_router, evaluate_only_router
-
 from fastapi.middleware.cors import CORSMiddleware
+from app.chat_router import router as chat_router
 
 import os
 from dotenv import load_dotenv, find_dotenv
@@ -12,7 +8,6 @@ from openai import OpenAI
 from getpass import getpass
 
 from app.core.settings import get_openai_api_key
-from app.routes.debug_router import router as debug_router
 
 
 app = FastAPI()
@@ -31,8 +26,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(problem_router, prefix="/api")
-app.include_router(evaluate_router, prefix="/api")
-app.include_router(debug_router, prefix="/api")
-app.include_router(stream_router.router, prefix="/api")
-app.include_router(evaluate_only_router.router, prefix="/api")
+
+app.include_router(chat_router, prefix="/api")
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Pizza Tutorial API!"}
