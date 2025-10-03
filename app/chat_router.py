@@ -1,5 +1,10 @@
+# chat_router.py
+
 from fastapi import APIRouter, HTTPException, Request
-from app.services import few_shot, role_prompting, rag, reflexion, markdown_template, hallucination
+from app.business_logic import rag as rag_logic # rag 함수 이름 충돌 방지를 위해 별칭 사용
+from app.utils.data_loader import get_tutorial_full_text # 데이터 로더 임포트
+
+from app.services import few_shot, role_prompting, reflexion, markdown_template, hallucination
 
 router = APIRouter()
 
@@ -17,7 +22,7 @@ async def handle_chat(ingredient_name: str, request: Request):
     elif ingredient_name == "pepperoni": # 페퍼로니 -> 할루시네이션 유도
         response_text = await hallucination.generate_response(messages)
     elif ingredient_name == "olive": # 올리브 -> RAG
-        response_text = await rag.generate_response(messages)
+        response_text = await rag_logic.generate_response(messages)
     elif ingredient_name == "basil": # 바질 -> Reflexion
         response_text = await reflexion.generate_response(messages)
     

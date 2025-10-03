@@ -1,19 +1,26 @@
+#uvicorn app.main:app --reload
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.chat_router import router as chat_router
+from app.api import chat
 
 import os
 from dotenv import load_dotenv, find_dotenv
 from openai import OpenAI
 from getpass import getpass
 
-from app.core.settings import get_openai_api_key
+from app.core.settings import get_settings
 
 
-app = FastAPI()
+app = FastAPI(
+    title="RAG Tutorial Chatbot API",
+    version="1.0.0",
+    description="튜토리얼 지식 기반 RAG 챗봇 서비스"
+)
 
 try:
-    ok = bool(get_openai_api_key())
+    ok = bool(get_settings())
     print("OPENAI_API_KEY loaded?", ok)
 except Exception as e:
     print("ENV LOAD ERROR:", e)
@@ -27,7 +34,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(chat_router, prefix="/api")
+# app.include_router(chat_router, prefix="/api")
+app.include_router(chat.router, prefix="/api/chat", tags=["rag_chat"])
 
 @app.get("/")
 def read_root():
