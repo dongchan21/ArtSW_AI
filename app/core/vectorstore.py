@@ -1,5 +1,6 @@
 # app/core/vectorstore.py
 
+from fastapi import logger
 from pinecone import Pinecone, ServerlessSpec, PodSpec
 from pinecone.exceptions import PineconeException
 from typing import List, Dict, Any, Optional, Tuple
@@ -22,13 +23,14 @@ def get_pinecone_index() -> Pinecone.Index:
     """
     global _pinecone_client, _pinecone_index
     settings = get_settings()
-
-    
+        
     # 1. Pinecone 클라이언트 초기화 (기존 로직 유지)
     if _pinecone_client is None:
         try:
             _pinecone_client = Pinecone(api_key=settings.PINECONE_API_KEY)
+            print("✅ Pinecone client initialized.")
         except Exception as e:
+            print(f"Failed to initialize Pinecone client: {e}")
             raise PineconeException(f"Pinecone client initialization failed: {e}")
 
     # 2. 인덱스 존재 확인 및 생성 로직
@@ -82,7 +84,7 @@ def query_vectorstore(query_text: str) -> List[Dict[str, Any]]:
     
     try:
         # 1. 질문 텍스트를 벡터로 변환 (embeddings.py 모듈 사용)
-        query_vector = embed_texts(query_text)
+        query_vector = embed_texts([query_text])[0]
         
         # 2. Pinecone 인덱스 객체 가져오기
         index = get_pinecone_index()
@@ -96,13 +98,10 @@ def query_vectorstore(query_text: str) -> List[Dict[str, Any]]:
         )
         
         # 4. 검색 결과를 리스트로 정리하여 반환
-        return results.matches
+        return results.get('matches', [])
 
-    except PineconeException as e:
-        print(f"Pinecone query failed: {e}")
-        return []
     except Exception as e:
-        print(f"An unexpected error occurred during query: {e}")
+        # ⚠️ 치명적인 오류가 발생해도 반드시 로그를 출력하고 빈 리스트를 반환
         return []
 
 

@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from app.business_logic import rag as rag_logic # rag 함수 이름 충돌 방지를 위해 별칭 사용
 from app.utils.data_loader import get_tutorial_full_text # 데이터 로더 임포트
 
-from app.services import few_shot, role_prompting, reflexion, markdown_template, hallucination
+from app.services import few_shot, role_prompting, reflexion, markdown_template, hallucination, rag_logic
 
 router = APIRouter()
 

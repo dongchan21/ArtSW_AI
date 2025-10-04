@@ -34,8 +34,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# app.include_router(chat_router, prefix="/api")
-app.include_router(chat.router, prefix="/api/chat", tags=["rag_chat"])
+app.include_router(chat_router, prefix="/api")
+# app.include_router(chat.router, prefix="/api/chat", tags=["rag_chat"])
 
 @app.get("/")
 def read_root():

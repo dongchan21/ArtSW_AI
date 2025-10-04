@@ -1,0 +1,16 @@
+[
+    {
+        "id": "google_prompt_guide_01",
+        "url": "https://blog.kakaocdn.net/dna/cjFG3y/btsNh4t4kPp/AAAAAAAAAAAAAAAAAAAAALVFKScK1NVwOFldG-6t4glzDeYCZ_pD6uvrBDUg7dOt/Prompt%20Engineering.pdf?credential=yqXZFxpELC7KVnFOS48ylbz2pIh7yKj8&expires=1761922799&allow_ip=&allow_referer=&signature=qMz8RYQrD1Qc97ZrOTWS5LpObpE%3D&attach=1&knm=tfile.pdf", 
+        "title": "Google Prompt Engineering Guide",
+        "category": "Prompting Techniques",
+        "publisher": "Google", 
+        "date": "2025-02-01",   
+        "language": "en", 
+        "doc_type": "guide",
+        "tags": "프롬프트,CoT,ReAct,가이드",
+        "techniques": ["few_shot", "cot", "react", "role_prompting"],
+        "notes": "Google 공식 프롬프트 가이드",
+        "license": "google-terms"  
+    }
+]
