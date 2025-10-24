@@ -32,7 +32,8 @@ app.add_middleware(
 
 
 async def generate_response(messages_from_client: list):
-    
+    print("📩 받은 메시지:", messages_from_client)
+
     gpt_messages = []
     for msg in messages_from_client:
         # GPT API 호출에 맞게 메시지 포맷을 변환합니다.
@@ -59,7 +60,6 @@ async def generate_response(messages_from_client: list):
         )
 
     gpt_response_text = completion.choices[0].message.content
-
     return {
             "success": True,
             "data": {
