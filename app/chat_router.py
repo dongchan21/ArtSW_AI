@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from app.business_logic import rag as rag_logic # rag 함수 이름 충돌 방지를 위해 별칭 사용
 from app.utils.data_loader import get_tutorial_full_text # 데이터 로더 임포트
 
-from app.services import few_shot, role_prompting, reflexion, markdown_template, hallucination, rag_logic, quiz
+from app.services import chatbot, few_shot, role_prompting, reflexion, markdown_template, hallucination, rag_logic, quiz
 
 router = APIRouter()
 
@@ -27,7 +27,8 @@ async def handle_chat(ingredient_name: str, request: Request):
         response_text = await reflexion.generate_response(messages)
     elif ingredient_name == "quiz": # 주관식 퀴즈 채점
         response_text = await quiz.evaluate_prompt(messages)
-    
+    elif ingredient_name == "chatbot": # 챗봇 일반 대화
+        response_text = await chatbot.generate_response(messages)    
     else:
         raise HTTPException(status_code=404, detail="재료를 찾을 수 없습니다.")
 
